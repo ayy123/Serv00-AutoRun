@@ -10,18 +10,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 检出代码
       - name: Checkout
         uses: actions/checkout@v2
 
+      # 设置 SSH 密钥
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.5.3
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Check SOCKS5 connectivity and restart service if disconnected
+      # 检查 SOCKS5 代理连通性，如果不可用，则重新启动服务
+      - name: Check SOCKS5 connectivity and restart service if needed
+        id: check_service
         run: |
-          TARGET_URL="http://ip.sb"
+          SOCKS5_PROXY="${{ secrets.SOCKS5_PROXY }}"
+          TARGET_URL="https://ip.sb"
 
-          if ! curl --socks5 ${{ secrets.SOCKS5_PROXY }} --connect-timeout 10 -I $TARGET_URL > /dev/null 2>&1; then
-            ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER_HOST }} "/home/$(echo ${{ secrets.SSH_USER_HOST }} | cut -d'@' -f1)/run.sh"
+          # 检查 SOCKS5 代理连通性
+          if ! curl --socks5 $SOCKS5_PROXY --connect-timeout 10 -I $TARGET_URL > /dev/null 2>&1; then
+            # 如果代理不可用，重启服务
+            SSH_USER_HOST="${{ secrets.SSH_USER_HOST }}"
+            USERNAME=$(echo "$SSH_USER_HOST" | cut -d'@' -f1)
+            HOST=$(echo "$SSH_USER_HOST" | cut -d'@' -f2)
+            ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "/home/$USERNAME/run.sh"
+            # 设置环境变量标记服务已重启
+            echo "SERVICE_RESTARTED=true" >> $GITHUB_ENV
+          else
+            # 如果代理正常，设置环境变量为 false
+            echo "SERVICE_RESTARTED=false" >> $GITHUB_ENV
           fi
+
+      # 如果服务已重启，发送 Telegram 通知
+      - name: Send Telegram notification
+        if: env.SERVICE_RESTARTED == 'true'
+        run: |
+          MESSAGE="Service has been restarted."
+          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+          -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+          -d text="$MESSAGE"
