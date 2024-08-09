@@ -6,8 +6,9 @@ on:
     - cron: '0/5 * * * *'  # 每5分钟运行一次
 
 jobs:
-  ssh-and-run:
+  check-and-restart:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -17,20 +18,10 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Check if service is running
-        id: check_service
+      - name: Check SOCKS5 connectivity and restart service if disconnected
         run: |
-          if curl --head --silent --fail ${{ secrets.WEB_SERVICE_URL }} > /dev/null; then
-            echo "SERVICE_STATUS=running" >> $GITHUB_ENV
-          else
-            echo "SERVICE_STATUS=not_running" >> $GITHUB_ENV
-          fi
+          TARGET_URL="http://ip.sb"
 
-      - name: Extract username and host, and run script if service is not running
-        if: env.SERVICE_STATUS == 'not_running'
-        run: |
-          SSH_USER_HOST="${{ secrets.SSH_USER_HOST }}"
-          USERNAME=$(echo "$SSH_USER_HOST" | cut -d'@' -f1)
-          HOST=$(echo "$SSH_USER_HOST" | cut -d'@' -f2)
-          ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "/home/$USERNAME/run.sh"
-        # 从 SSH_USER_HOST 中提取用户名和主机名，直接在同一步骤中执行远程脚本
+          if ! curl --socks5 ${{ secrets.SOCKS5_PROXY }} --connect-timeout 10 -I $TARGET_URL > /dev/null 2>&1; then
+            ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER_HOST }} "/home/$(echo ${{ secrets.SSH_USER_HOST }} | cut -d'@' -f1)/run.sh"
+          fi
