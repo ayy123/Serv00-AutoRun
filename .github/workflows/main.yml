@@ -45,7 +45,7 @@ jobs:
       - name: Send Telegram notification
         if: env.SERVICE_RESTARTED == 'true'
         run: |
-          MESSAGE="Service has been restarted."
+          MESSAGE="SOCKS5服务已重启..."
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
           -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
           -d text="$MESSAGE"
