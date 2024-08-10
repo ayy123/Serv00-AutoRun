@@ -29,23 +29,19 @@ jobs:
 
           # 检查 SOCKS5 代理连通性
           if ! curl --socks5 $SOCKS5_PROXY --connect-timeout 10 -I $TARGET_URL > /dev/null 2>&1; then
-            # 如果代理不可用，重启服务
+          
+            # 如果代理不可用，发送 Telegram 通知并重启服务
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+            -d text="SOCKS5连通检测失败，开始远程运行启动脚本..."
+            
             SSH_USER_HOST="${{ secrets.SSH_USER_HOST }}"
             USERNAME=$(echo "$SSH_USER_HOST" | cut -d'@' -f1)
             HOST=$(echo "$SSH_USER_HOST" | cut -d'@' -f2)
+            
+            # 执行远程脚本
             ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "/home/$USERNAME/run.sh"
-            # 设置环境变量标记服务已重启
-            echo "SERVICE_RESTARTED=true" >> $GITHUB_ENV
-          else
-            # 如果代理正常，设置环境变量为 false
-            echo "SERVICE_RESTARTED=false" >> $GITHUB_ENV
           fi
 
-      # 如果服务已重启，发送 Telegram 通知
-      - name: Send Telegram notification
-        if: env.SERVICE_RESTARTED == 'true'
-        run: |
-          MESSAGE="SOCKS5服务已重启..."
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
-          -d chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-          -d text="$MESSAGE"
+
+
