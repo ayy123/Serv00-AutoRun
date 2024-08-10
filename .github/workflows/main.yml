@@ -3,7 +3,7 @@ name: autorun
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0/5 * * * *'  # 每5分钟运行一次
+    - cron: '0/15 * * * *'  # 每15分钟运行一次
 
 jobs:
   check-and-restart:
