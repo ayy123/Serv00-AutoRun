@@ -40,7 +40,7 @@ jobs:
             HOST=$(echo "$SSH_USER_HOST" | cut -d'@' -f2)
             
             # 执行远程脚本
-            ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "/home/$USERNAME/run.sh"
+            ssh -o StrictHostKeyChecking=no $SSH_USER_HOST "/home/$USERNAME/run.sh"
           fi
 
 
