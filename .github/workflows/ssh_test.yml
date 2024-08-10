@@ -1,0 +1,26 @@
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # 设置 SSH 密钥
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # 测试 SSH 连接并运行脚本
+      - name: Test SSH connection and run script
+        run: |
+          SSH_USER_HOST="${{ secrets.SSH_USER_HOST }}" # SSH_USER_HOST should be set as user@hostname in secrets
+          USERNAME=$(echo "$SSH_USER_HOST" | cut -d'@' -f1)
+          HOST=$(echo "$SSH_USER_HOST" | cut -d'@' -f2)
+          ssh -o StrictHostKeyChecking=no $USERNAME@$HOST "/home/$USERNAME/run.sh"
