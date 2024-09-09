@@ -25,7 +25,7 @@ jobs:
         id: check_service
         run: |
           SOCKS5_PROXY="${{ secrets.SOCKS5_PROXY }}"
-          TARGET_URL="http://yuyao-2436.serv00.net/"
+          TARGET_URL="http://www.gstatic.com/generate_204"
 
           # 检查 SOCKS5 代理连通性
           if ! curl --socks5 $SOCKS5_PROXY --connect-timeout 10 -I $TARGET_URL > /dev/null 2>&1; then
